@@ -272,6 +272,7 @@ export async function addInventoryQuantity(req, res, next) {
         }
 
         const now = new Date();
+        // console.log(productId);
 
         const outcome = await db.transaction(async (tx) => {
             const result = await tx
@@ -281,8 +282,8 @@ export async function addInventoryQuantity(req, res, next) {
                     updatedAt: now,
                 })
                 .where(eq(inventory.productId, productId));
-
-            if (result.rowsAffected !== 1) return { type: "not_found" };
+            // console.log(result.rows);
+            // if (result.rowsAffected !== 1) return { type: "not_found" };
 
             await tx.insert(inventoryMovements).values({
                 productId,
