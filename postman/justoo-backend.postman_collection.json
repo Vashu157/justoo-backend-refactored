@@ -8,6 +8,7 @@
     { "key": "baseUrl", "value": "http://localhost:4000" },
     { "key": "adminEmail", "value": "admin@example.com" },
     { "key": "adminPassword", "value": "ChangeMe123" },
+    { "key": "adminId", "value": "" },
     { "key": "customerPhone", "value": "9999999999" },
     { "key": "customerOtp", "value": "123456" },
     { "key": "customerToken", "value": "" },
@@ -73,6 +74,83 @@
               "raw": "{{baseUrl}}/admin/auth/logout",
               "host": ["{{baseUrl}}"],
               "path": ["admin", "auth", "logout"]
+            }
+          }
+        },
+        {
+          "name": "Admins - Create",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": {
+              "raw": "{{baseUrl}}/admin/admins",
+              "host": ["{{baseUrl}}"],
+              "path": ["admin", "admins"]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"New Admin\",\n  \"email\": \"newadmin@example.com\",\n  \"password\": \"ChangeMe123\",\n  \"roles\": [\"ADMIN\"]\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const json = pm.response.json();",
+                  "if (json?.admin?.id) pm.collectionVariables.set('adminId', json.admin.id);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Admins - List",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/admin/admins",
+              "host": ["{{baseUrl}}"],
+              "path": ["admin", "admins"]
+            }
+          }
+        },
+        {
+          "name": "Admins - Get by ID",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/admin/admins/{{adminId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["admin", "admins", "{{adminId}}"]
+            }
+          }
+        },
+        {
+          "name": "Admins - Update",
+          "request": {
+            "method": "PATCH",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": {
+              "raw": "{{baseUrl}}/admin/admins/{{adminId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["admin", "admins", "{{adminId}}"]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Updated Admin\"\n}"
+            }
+          }
+        },
+        {
+          "name": "Admins - Delete",
+          "request": {
+            "method": "DELETE",
+            "url": {
+              "raw": "{{baseUrl}}/admin/admins/{{adminId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["admin", "admins", "{{adminId}}"]
             }
           }
         },
