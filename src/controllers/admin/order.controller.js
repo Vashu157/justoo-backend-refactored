@@ -130,6 +130,7 @@ export async function getOrderById(req, res, next) {
                 id: orderItems.id,
                 productId: orderItems.productId,
                 productName: products.name,
+                productImgUrl: products.imgUrl,
                 quantity: orderItems.quantity,
                 unitPrice: orderItems.unitPrice,
                 discountPercent: orderItems.discountPercent,

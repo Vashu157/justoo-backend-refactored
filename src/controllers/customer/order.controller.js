@@ -119,6 +119,7 @@ export async function createOrder(req, res, next) {
                     quantity: inventory.quantity,
                     productIsActive: products.isActive,
                     productName: products.name,
+                    productImgUrl: products.imgUrl,
                 })
                 .from(inventory)
                 .innerJoin(products, eq(products.id, inventory.productId))
@@ -148,6 +149,7 @@ export async function createOrder(req, res, next) {
                 return {
                     productId: it.productId,
                     productName: inv.productName,
+                    productImgUrl: inv.productImgUrl,
                     quantity: it.quantity,
                     unitPrice: roundMoneyToString(unitPrice),
                     discountPercent: String(inv.discountPercent ?? "0"),

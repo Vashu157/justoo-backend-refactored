@@ -4,9 +4,11 @@ import { and, desc, eq, inArray, isNull } from "drizzle-orm";
 import { db } from "../../db/index.js";
 import {
     orderAddresses,
+    orderItems,
     orders,
     orderEvents,
     payments,
+    products,
     riderAssignments,
     riders,
 } from "../../db/schema.js";
@@ -36,7 +38,45 @@ export async function listAvailableOrders(req, res, next) {
             .where(and(eq(orders.status, "CREATED"), isNull(riderAssignments.orderId)))
             .orderBy(desc(orders.createdAt));
 
-        return res.json({ orders: rows });
+        const orderIds = rows.map((o) => o.id);
+        const itemRows = orderIds.length
+            ? await db
+                .select({
+                    orderId: orderItems.orderId,
+                    productId: orderItems.productId,
+                    productName: products.name,
+                    productImgUrl: products.imgUrl,
+                    quantity: orderItems.quantity,
+                    unitPrice: orderItems.unitPrice,
+                    discountPercent: orderItems.discountPercent,
+                    finalPrice: orderItems.finalPrice,
+                })
+                .from(orderItems)
+                .innerJoin(products, eq(products.id, orderItems.productId))
+                .where(inArray(orderItems.orderId, orderIds))
+            : [];
+
+        const itemsByOrderId = new Map();
+        for (const it of itemRows) {
+            const list = itemsByOrderId.get(it.orderId) ?? [];
+            list.push({
+                productId: it.productId,
+                productName: it.productName,
+                productImgUrl: it.productImgUrl,
+                quantity: it.quantity,
+                unitPrice: it.unitPrice,
+                discountPercent: it.discountPercent,
+                finalPrice: it.finalPrice,
+            });
+            itemsByOrderId.set(it.orderId, list);
+        }
+
+        const enriched = rows.map((o) => ({
+            ...o,
+            items: itemsByOrderId.get(o.id) ?? [],
+        }));
+
+        return res.json({ orders: enriched });
     } catch (err) {
         next(err);
     }
@@ -72,7 +112,45 @@ export async function listMyActiveOrders(req, res, next) {
             )
             .orderBy(desc(orders.createdAt));
 
-        return res.json({ orders: rows });
+        const orderIds = rows.map((o) => o.id);
+        const itemRows = orderIds.length
+            ? await db
+                .select({
+                    orderId: orderItems.orderId,
+                    productId: orderItems.productId,
+                    productName: products.name,
+                    productImgUrl: products.imgUrl,
+                    quantity: orderItems.quantity,
+                    unitPrice: orderItems.unitPrice,
+                    discountPercent: orderItems.discountPercent,
+                    finalPrice: orderItems.finalPrice,
+                })
+                .from(orderItems)
+                .innerJoin(products, eq(products.id, orderItems.productId))
+                .where(inArray(orderItems.orderId, orderIds))
+            : [];
+
+        const itemsByOrderId = new Map();
+        for (const it of itemRows) {
+            const list = itemsByOrderId.get(it.orderId) ?? [];
+            list.push({
+                productId: it.productId,
+                productName: it.productName,
+                productImgUrl: it.productImgUrl,
+                quantity: it.quantity,
+                unitPrice: it.unitPrice,
+                discountPercent: it.discountPercent,
+                finalPrice: it.finalPrice,
+            });
+            itemsByOrderId.set(it.orderId, list);
+        }
+
+        const enriched = rows.map((o) => ({
+            ...o,
+            items: itemsByOrderId.get(o.id) ?? [],
+        }));
+
+        return res.json({ orders: enriched });
     } catch (err) {
         next(err);
     }
