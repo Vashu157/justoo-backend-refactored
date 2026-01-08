@@ -58,7 +58,7 @@ export async function loginAdmin(req, res, next) {
 
 export async function logoutAdmin(req, res, next) {
     try {
-        const cookieName = process.env.SESSION_COOKIE_NAME || "justoo.sid";
+        const cookieName = env.SESSION_COOKIE_NAME || "justoo.sid";
 
         if (!req.session) {
             res.clearCookie(cookieName);

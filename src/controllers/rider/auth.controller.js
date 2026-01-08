@@ -7,8 +7,9 @@ import { eq } from "drizzle-orm";
 import { db } from "../../db/index.js";
 import { riders, riderSessions } from "../../db/schema.js";
 import { toStringOrUndefined } from "../../utils/common.js";
+import { env } from "../../config/env.js";
 
-const JWT_TTL = process.env.RIDER_JWT_TTL || "1d";
+const JWT_TTL = env.RIDER_JWT_TTL || "1d";
 
 function tokenToHash(token) {
     return crypto.createHash("sha256").update(String(token)).digest("hex");
@@ -19,8 +20,8 @@ function normalizeUsername(username) {
 }
 
 function requireJwtSecret() {
-    const secret = process.env.RIDER_JWT_SECRET || "dev-rider-jwt-secret";
-    const isProd = process.env.NODE_ENV === "production";
+    const secret = env.RIDER_JWT_SECRET || "dev-rider-jwt-secret";
+    const isProd = env.NODE_ENV === "production";
     if (isProd && secret === "dev-rider-jwt-secret") {
         throw new Error("RIDER_JWT_SECRET is required in production");
     }

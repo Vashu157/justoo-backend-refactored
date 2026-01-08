@@ -33,7 +33,7 @@ export async function listAvailableOrders(req, res, next) {
             .from(orders)
             .leftJoin(riderAssignments, eq(riderAssignments.orderId, orders.id))
             .leftJoin(orderAddresses, eq(orderAddresses.orderId, orders.id))
-            .where(and(eq(orders.status, "CONFIRMED"), isNull(riderAssignments.orderId)))
+            .where(and(eq(orders.status, "CREATED"), isNull(riderAssignments.orderId)))
             .orderBy(desc(orders.createdAt));
 
         return res.json({ orders: rows });
@@ -102,7 +102,7 @@ export async function acceptOrder(req, res, next) {
             const updated = await tx
                 .update(orders)
                 .set({ status: "ASSIGNED_RIDER" })
-                .where(and(eq(orders.id, orderId), eq(orders.status, "CONFIRMED")))
+                .where(and(eq(orders.id, orderId), eq(orders.status, "CREATED")))
                 .returning({ id: orders.id });
 
             if (!updated[0]) return { type: "lost_race" };
@@ -116,7 +116,7 @@ export async function acceptOrder(req, res, next) {
 
             await tx.insert(orderEvents).values({
                 orderId,
-                fromStatus: "CONFIRMED",
+                fromStatus: "CREATED",
                 toStatus: "ASSIGNED_RIDER",
                 actorType: "RIDER",
                 actorId: riderId,

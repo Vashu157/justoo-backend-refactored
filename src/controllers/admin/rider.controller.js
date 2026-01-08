@@ -23,7 +23,7 @@ export async function createRider(req, res, next) {
                 .json({ error: "NAME_PHONE_USERNAME_PASSWORD_REQUIRED" });
         }
 
-        const rounds = Number(process.env.BCRYPT_ROUNDS || 10);
+        const rounds = Number(env.BCRYPT_ROUNDS || 10);
         const passwordHash = await bcrypt.hash(password, rounds);
 
         const created = await db
@@ -121,7 +121,7 @@ export async function updateRider(req, res, next) {
         if (isActive !== undefined) updateValues.isActive = isActive;
 
         if (password) {
-            const rounds = Number(process.env.BCRYPT_ROUNDS || 10);
+            const rounds = Number(env.BCRYPT_ROUNDS || 10);
             updateValues.passwordHash = await bcrypt.hash(password, rounds);
         }
 

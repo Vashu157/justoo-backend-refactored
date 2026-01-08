@@ -7,12 +7,13 @@ import adminRouter from "./routes/admin/index.js";
 import customerRouter from "./routes/customer/index.js";
 import riderRouter from "./routes/rider/index.js";
 import { pool } from "./db/index.js";
+import { env, isProd } from "./config/env.js";
 
 const app = express();
 
 app.use(express.json());
 
-const frontendOrigin = process.env.FRONTEND_ORIGIN;
+const frontendOrigin = env.FRONTEND_ORIGIN;
 if (frontendOrigin) {
     app.use(
         cors({
@@ -22,18 +23,16 @@ if (frontendOrigin) {
     );
 }
 
-const isProd = process.env.NODE_ENV === "production";
-const sessionSecret = process.env.SESSION_SECRET || "dev-session-secret";
+const sessionSecret = env.SESSION_SECRET;
 if (isProd && sessionSecret === "dev-session-secret") {
     throw new Error("SESSION_SECRET is required in production");
 }
 
 const PgSessionStore = connectPgSimple(session);
-const cookieName = process.env.SESSION_COOKIE_NAME || "justoo.sid";
-const sessionTableName = process.env.SESSION_TABLE_NAME || "user_sessions";
-const sameSite = process.env.SESSION_SAMESITE || "lax";
-const cookieSecure =
-    isProd || (process.env.SESSION_COOKIE_SECURE || "").toLowerCase() === "true";
+const cookieName = env.SESSION_COOKIE_NAME;
+const sessionTableName = env.SESSION_TABLE_NAME;
+const sameSite = env.SESSION_SAMESITE;
+const cookieSecure = isProd || env.SESSION_COOKIE_SECURE;
 
 app.use(
     session({
@@ -64,7 +63,7 @@ app.use((err, req, res, next) => {
     res.status(500).json({ error: "INTERNAL_SERVER_ERROR" });
 });
 
-const port = Number(process.env.PORT || 4000);
+const port = Number(env.PORT || 4000);
 app.listen(port, () => {
     console.log(`Server listening on port ${port}`);
 });

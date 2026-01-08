@@ -19,26 +19,26 @@ function required(value, name) {
 }
 
 async function hashPassword(password) {
-    const rounds = Number(process.env.BCRYPT_ROUNDS || 10);
+    const rounds = Number(env.BCRYPT_ROUNDS || 10);
     return bcrypt.hash(password, rounds);
 }
 
 async function main() {
     const email =
         readArg("email") ||
-        process.env.SUPERADMIN_EMAIL ||
-        process.env.ADMIN_EMAIL;
+        env.SUPERADMIN_EMAIL ||
+        env.ADMIN_EMAIL;
     const password =
         readArg("password") ||
-        process.env.SUPERADMIN_PASSWORD ||
-        process.env.ADMIN_PASSWORD;
+        env.SUPERADMIN_PASSWORD ||
+        env.ADMIN_PASSWORD;
     const name =
         readArg("name") ||
-        process.env.SUPERADMIN_NAME ||
-        process.env.ADMIN_NAME ||
+        env.SUPERADMIN_NAME ||
+        env.ADMIN_NAME ||
         "Super Admin";
 
-    required(process.env.DATABASE_URL, "DATABASE_URL");
+    required(env.DATABASE_URL, "DATABASE_URL");
     required(email, "email");
     required(password, "password");
 

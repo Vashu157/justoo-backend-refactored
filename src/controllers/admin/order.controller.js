@@ -29,7 +29,6 @@ function statusFilterToStatuses(filter) {
 
     const CURRENT = [
         "CREATED",
-        "CONFIRMED",
         "ASSIGNED_RIDER",
         "OUT_FOR_DELIVERY",
     ];

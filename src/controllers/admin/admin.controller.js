@@ -33,7 +33,7 @@ function groupAdminsWithRoles(rows) {
 }
 
 async function hashPassword(password) {
-    const rounds = Number(process.env.BCRYPT_ROUNDS || 10);
+    const rounds = Number(env.BCRYPT_ROUNDS || 10);
     return bcrypt.hash(password, rounds);
 }
 

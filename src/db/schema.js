@@ -8,8 +8,6 @@ export const adminRoleEnum = pgEnum("admin_role", [
 
 export const orderStatusEnum = pgEnum("order_status", [
   "CREATED",
-  "PAID",
-  "CONFIRMED",
   "ASSIGNED_RIDER",
   "OUT_FOR_DELIVERY",
   "DELIVERED",

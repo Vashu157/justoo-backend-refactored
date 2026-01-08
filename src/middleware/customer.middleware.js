@@ -5,10 +5,11 @@ import { and, eq, gt } from "drizzle-orm";
 
 import { db } from "../db/index.js";
 import { customerSessions, customers } from "../db/schema.js";
+import { env } from "../config/env.js";
 
 function requireJwtSecret() {
-    const secret = process.env.CUSTOMER_JWT_SECRET || "dev-customer-jwt-secret";
-    const isProd = process.env.NODE_ENV === "production";
+    const secret = env.CUSTOMER_JWT_SECRET || "dev-customer-jwt-secret";
+    const isProd = env.NODE_ENV === "production";
     if (isProd && secret === "dev-customer-jwt-secret") {
         throw new Error("CUSTOMER_JWT_SECRET is required in production");
     }

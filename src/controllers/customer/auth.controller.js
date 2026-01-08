@@ -11,9 +11,10 @@ import {
     phoneWhitelist,
 } from "../../db/schema.js";
 import { customerOtp } from "../../utils/customerOtp.js";
+import { env } from "../../config/env.js";
 
-const OTP_TTL_MS = Number(process.env.CUSTOMER_OTP_TTL_MS || 1000 * 60 * 5);
-const JWT_TTL = process.env.CUSTOMER_JWT_TTL || "7d";
+const OTP_TTL_MS = Number(env.CUSTOMER_OTP_TTL_MS || 1000 * 60 * 5);
+const JWT_TTL = env.CUSTOMER_JWT_TTL || "7d";
 
 function tokenToHash(token) {
     return crypto.createHash("sha256").update(String(token)).digest("hex");
@@ -31,8 +32,8 @@ function normalizePhone(phone) {
 }
 
 function requireJwtSecret() {
-    const secret = process.env.CUSTOMER_JWT_SECRET || "dev-customer-jwt-secret";
-    const isProd = process.env.NODE_ENV === "production";
+    const secret = env.CUSTOMER_JWT_SECRET || "dev-customer-jwt-secret";
+    const isProd = env.NODE_ENV === "production";
     if (isProd && secret === "dev-customer-jwt-secret") {
         throw new Error("CUSTOMER_JWT_SECRET is required in production");
     }

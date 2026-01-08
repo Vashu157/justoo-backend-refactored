@@ -1,6 +1,15 @@
 import { eq, sql, and, gte } from "drizzle-orm";
 import { inventory, inventoryMovements } from "../db/schema.js";
 
+function affectedRows(result) {
+  if (!result || typeof result !== "object") return undefined;
+  // sqlite/mysql style
+  if (typeof result.rowsAffected === "number") return result.rowsAffected;
+  // node-postgres style
+  if (typeof result.rowCount === "number") return result.rowCount;
+  return undefined;
+}
+
 function normalizeItems(items) {
   const map = new Map();
 
@@ -44,7 +53,7 @@ export async function reserveInventory(tx, items) {
         )
       );
 
-    if (result.rowsAffected !== 1) {
+    if (affectedRows(result) !== 1) {
       throw new Error(`INSUFFICIENT_STOCK:${productId}`);
     }
   }
@@ -68,7 +77,7 @@ export async function restoreInventory(tx, items, movement) {
       })
       .where(eq(inventory.productId, productId));
 
-    if (result.rowsAffected !== 1) {
+    if (affectedRows(result) !== 1) {
       throw new Error(`INVENTORY_ROW_MISSING:${productId}`);
     }
 
