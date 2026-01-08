@@ -5,7 +5,7 @@
   "main": "index.js",
   "type": "module",
   "scripts": {
-    "dev": "node --watch src/server.js",
+    "dev": "node src/server.js",
     "seed:superadmin": "node src/scripts/superadmin.js",
     "db:push": "drizzle-kit push",
     "db:generate": "drizzle-kit generate",

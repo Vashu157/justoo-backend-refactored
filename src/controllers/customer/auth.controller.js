@@ -1,18 +1,29 @@
 
 import crypto from "node:crypto";
 import jwt from "jsonwebtoken";
-import { eq } from "drizzle-orm";
+import { and, eq } from "drizzle-orm";
 
 import { db } from "../../db/index.js";
-import { customerSessions, customers, phoneWhitelist } from "../../db/schema.js";
+import {
+    customerOtps,
+    customerSessions,
+    customers,
+    phoneWhitelist,
+} from "../../db/schema.js";
 import { customerOtp } from "../../utils/customerOtp.js";
 
 const OTP_TTL_MS = Number(process.env.CUSTOMER_OTP_TTL_MS || 1000 * 60 * 5);
 const JWT_TTL = process.env.CUSTOMER_JWT_TTL || "7d";
 
-const otpStore = new Map();
 function tokenToHash(token) {
     return crypto.createHash("sha256").update(String(token)).digest("hex");
+}
+
+function otpToHash(phone, otp) {
+    return crypto
+        .createHash("sha256")
+        .update(`${String(phone)}:${String(otp)}`)
+        .digest("hex");
 }
 
 function normalizePhone(phone) {
@@ -55,13 +66,26 @@ export async function sendOtp(req, res, next) {
         }
 
         const otp = String(Math.floor(100000 + Math.random() * 900000));
-        const expiresAt = Date.now() + OTP_TTL_MS;
+        const expiresAt = new Date(Date.now() + OTP_TTL_MS);
 
-        otpStore.set(phone, {
-            otp,
-            expiresAt,
-            used: false,
-        });
+        const otpHash = otpToHash(phone, otp);
+
+        await db
+            .insert(customerOtps)
+            .values({
+                phone,
+                otpHash,
+                expiresAt,
+                used: false,
+            })
+            .onConflictDoUpdate({
+                target: customerOtps.phone,
+                set: {
+                    otpHash,
+                    expiresAt,
+                    used: false,
+                },
+            });
 
         customerOtp(phone, otp);
 
@@ -80,78 +104,112 @@ export async function verifyOtp(req, res, next) {
             return res.status(400).json({ error: "PHONE_AND_OTP_REQUIRED" });
         }
 
-        const entry = otpStore.get(phone);
-        if (!entry) return res.status(401).json({ error: "OTP_INVALID" });
+        const now = new Date();
+        const expectedHash = otpToHash(phone, otp);
 
-        if (entry.used) {
-            otpStore.delete(phone);
-            return res.status(401).json({ error: "OTP_INVALID" });
-        }
+        const result = await db.transaction(async (tx) => {
+            const otpRows = await tx
+                .select({
+                    phone: customerOtps.phone,
+                    otpHash: customerOtps.otpHash,
+                    expiresAt: customerOtps.expiresAt,
+                    used: customerOtps.used,
+                })
+                .from(customerOtps)
+                .where(eq(customerOtps.phone, phone))
+                .limit(1);
 
-        if (Date.now() > entry.expiresAt) {
-            otpStore.delete(phone);
-            return res.status(401).json({ error: "OTP_EXPIRED" });
-        }
+            const otpRow = otpRows[0];
+            if (!otpRow) return { type: "otp_invalid" };
+            if (otpRow.used) return { type: "otp_invalid" };
+            if (otpRow.expiresAt && now > otpRow.expiresAt) {
+                await tx.delete(customerOtps).where(eq(customerOtps.phone, phone));
+                return { type: "otp_expired" };
+            }
+            if (otpRow.otpHash !== expectedHash) return { type: "otp_invalid" };
 
-        if (entry.otp !== otp) {
-            return res.status(401).json({ error: "OTP_INVALID" });
-        }
+            const usedRows = await tx
+                .update(customerOtps)
+                .set({ used: true })
+                .where(and(eq(customerOtps.phone, phone), eq(customerOtps.used, false)))
+                .returning({ phone: customerOtps.phone });
 
-        entry.used = true;
-        otpStore.delete(phone);
+            if (!usedRows[0]) return { type: "otp_invalid" };
 
-        const customerRows = await db
-            .select({
-                id: customers.id,
-                name: customers.name,
-                phone: customers.phone,
-                email: customers.email,
-                createdAt: customers.createdAt,
-            })
-            .from(customers)
-            .where(eq(customers.phone, phone))
-            .limit(1);
+            // Find customer by phone; create if missing.
+            const customerRows = await tx
+                .select({
+                    id: customers.id,
+                    name: customers.name,
+                    phone: customers.phone,
+                    email: customers.email,
+                    createdAt: customers.createdAt,
+                })
+                .from(customers)
+                .where(eq(customers.phone, phone))
+                .limit(1);
 
-        const customer = customerRows[0];
-        if (!customer) {
-            return res.status(404).json({ error: "CUSTOMER_NOT_FOUND" });
-        }
+            let customer = customerRows[0];
+            if (!customer) {
+                const last4 = phone.slice(-4);
+                const inserted = await tx
+                    .insert(customers)
+                    .values({
+                        name: last4 ? `Customer ${last4}` : "Customer",
+                        phone,
+                        email: null,
+                    })
+                    .returning({
+                        id: customers.id,
+                        name: customers.name,
+                        phone: customers.phone,
+                        email: customers.email,
+                        createdAt: customers.createdAt,
+                    });
 
-        const jti = crypto.randomUUID();
-        const secret = requireJwtSecret();
-        const token = jwt.sign(
-            {
-                sub: customer.id,
-                phone: customer.phone,
-                jti,
-                typ: "customer",
-            },
-            secret,
-            { expiresIn: JWT_TTL }
-        );
+                customer = inserted[0];
+                if (!customer) return { type: "failed" };
+            }
 
-        const decoded = jwt.decode(token);
-        const exp = decoded?.exp;
-        if (!exp) {
-            return res.status(500).json({ error: "TOKEN_CREATE_FAILED" });
-        }
+            // ---- Session logic unchanged below (JWT + customer_sessions) ----
+            const jti = crypto.randomUUID();
+            const secret = requireJwtSecret();
+            const token = jwt.sign(
+                {
+                    sub: customer.id,
+                    phone: customer.phone,
+                    jti,
+                    typ: "customer",
+                },
+                secret,
+                { expiresIn: JWT_TTL }
+            );
 
-        const tokenHash = tokenToHash(token);
-        const expiresAt = new Date(Number(exp) * 1000);
+            const decoded = jwt.decode(token);
+            const exp = decoded?.exp;
+            if (!exp) return { type: "token_failed" };
 
-        await db
-            .insert(customerSessions)
-            .values({
-                customerId: customer.id,
-                tokenHash,
-                expiresAt,
-            })
-            .onConflictDoNothing({ target: customerSessions.tokenHash });
+            const tokenHash = tokenToHash(token);
+            const tokenExpiresAt = new Date(Number(exp) * 1000);
 
-        return res.json({
-            token,
-            customer,
+            await tx
+                .insert(customerSessions)
+                .values({
+                    customerId: customer.id,
+                    tokenHash,
+                    expiresAt: tokenExpiresAt,
+                })
+                .onConflictDoNothing({ target: customerSessions.tokenHash });
+
+            return { type: "ok", token, customer };
         });
+
+        if (result.type === "otp_expired") return res.status(401).json({ error: "OTP_EXPIRED" });
+        if (result.type === "otp_invalid") return res.status(401).json({ error: "OTP_INVALID" });
+        if (result.type === "token_failed") return res.status(500).json({ error: "TOKEN_CREATE_FAILED" });
+        if (result.type !== "ok") return res.status(500).json({ error: "LOGIN_FAILED" });
+
+        return res.json({ token: result.token, customer: result.customer });
     } catch (err) {
         next(err);
     }

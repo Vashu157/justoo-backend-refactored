@@ -47,6 +47,7 @@ import {
   varchar,
   timestamp,
   text,
+  boolean,
 } from "drizzle-orm/pg-core";
 
 export const admins = pgTable("admins", {
@@ -83,6 +84,15 @@ export const customerSessions = pgTable("customer_sessions", {
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
+export const customerOtps = pgTable("customer_otps", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  phone: varchar("phone", { length: 20 }).notNull().unique(),
+  otpHash: varchar("otp_hash", { length: 255 }).notNull(),
+  expiresAt: timestamp("expires_at").notNull(),
+  used: boolean("used").default(false).notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
 
 export const addresses = pgTable("addresses", {
   id: uuid("id").defaultRandom().primaryKey(),
@@ -96,7 +106,7 @@ export const addresses = pgTable("addresses", {
 });
 
 
-import { numeric, integer, boolean } from "drizzle-orm/pg-core";
+import { numeric, integer } from "drizzle-orm/pg-core";
 
 export const products = pgTable("products", {
   id: uuid("id").defaultRandom().primaryKey(),
