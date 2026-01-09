@@ -4,6 +4,7 @@ import { and, eq } from "drizzle-orm";
 import { db } from "../../db/index.js";
 import { admins, adminRoles } from "../../db/schema.js";
 import { isPgUniqueViolation, toStringOrUndefined } from "../../utils/common.js";
+import { env } from "../../config/env.js";
 
 const DEFAULT_ROLES = ["ADMIN"];
 
