@@ -37,7 +37,8 @@ if (isProd && sessionSecret === "dev-session-secret") {
 const PgSessionStore = connectPgSimple(session);
 const cookieName = env.SESSION_COOKIE_NAME;
 const sessionTableName = env.SESSION_TABLE_NAME;
-const sameSite = env.SESSION_SAMESITE;
+// const sameSite = env.SESSION_SAMESITE;
+const sameSite = "none"; // to allow cross-site cookies
 const cookieSecure = isProd || env.SESSION_COOKIE_SECURE;
 
 app.use(
