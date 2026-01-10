@@ -6,6 +6,18 @@ export const adminRoleEnum = pgEnum("admin_role", [
   "INVENTORY_VIEWER",
 ]);
 
+export const productCategoryEnum = pgEnum("product_category", [
+  "Beauty",
+  "Electronics",
+  "Kids",
+  "Kitchen",
+  "Snacks",
+  "Drinks",
+  "Household",
+  "Pharma",
+  "others",
+]);
+
 export const orderStatusEnum = pgEnum("order_status", [
   "CREATED",
   "ASSIGNED_RIDER",
@@ -111,6 +123,9 @@ export const products = pgTable("products", {
   name: varchar("name", { length: 150 }).notNull(),
   description: varchar("description", { length: 500 }),
   imgUrl: varchar("img_url", { length: 255 }),
+  productCategory: productCategoryEnum("product_category")
+    .default("others")
+    .notNull(),
   isActive: boolean("is_active").default(true).notNull(),
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });

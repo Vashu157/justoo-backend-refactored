@@ -5,6 +5,25 @@ import { products } from "../../db/schema.js";
 import { uploadImageBuffer } from "../../utils/cloudinary.js";
 import { toBooleanOrUndefined, toStringOrUndefined } from "../../utils/common.js";
 
+const PRODUCT_CATEGORIES = [
+    "Beauty",
+    "Electronics",
+    "Kids",
+    "Kitchen",
+    "Snacks",
+    "Drinks",
+    "Household",
+    "Pharma",
+    "others",
+];
+
+function normalizeProductCategory(value) {
+    const raw = toStringOrUndefined(value);
+    if (!raw) return undefined;
+    const hit = PRODUCT_CATEGORIES.find((c) => c.toLowerCase() === raw.trim().toLowerCase());
+    return hit;
+}
+
 async function maybeUploadProductImage(req, productId) {
     const file = req.file;
     if (!file?.buffer) return undefined;
@@ -21,6 +40,13 @@ export async function createProduct(req, res, next) {
         const name = toStringOrUndefined(req.body?.name);
         const description = toStringOrUndefined(req.body?.description);
         const isActive = toBooleanOrUndefined(req.body?.isActive);
+        const productCategory =
+            normalizeProductCategory(req.body?.productCategory ?? req.body?.product_category ?? req.body?.category) ??
+            "others";
+
+        if (!PRODUCT_CATEGORIES.includes(productCategory)) {
+            return res.status(400).json({ error: "INVALID_PRODUCT_CATEGORY" });
+        }
 
         if (!name) {
             return res.status(400).json({ error: "NAME_REQUIRED" });
@@ -32,6 +58,7 @@ export async function createProduct(req, res, next) {
                 .values({
                     name,
                     description,
+                    productCategory,
                     isActive: isActive ?? true,
                 })
                 .returning({
@@ -39,6 +66,7 @@ export async function createProduct(req, res, next) {
                     name: products.name,
                     description: products.description,
                     imgUrl: products.imgUrl,
+                    productCategory: products.productCategory,
                     isActive: products.isActive,
                     createdAt: products.createdAt,
                 });
@@ -57,6 +85,7 @@ export async function createProduct(req, res, next) {
                         name: products.name,
                         description: products.description,
                         imgUrl: products.imgUrl,
+                        productCategory: products.productCategory,
                         isActive: products.isActive,
                         createdAt: products.createdAt,
                     });
@@ -80,6 +109,7 @@ export async function listProducts(req, res, next) {
                 name: products.name,
                 description: products.description,
                 imgUrl: products.imgUrl,
+                productCategory: products.productCategory,
                 isActive: products.isActive,
                 createdAt: products.createdAt,
             })
@@ -102,6 +132,7 @@ export async function getProductById(req, res, next) {
                 name: products.name,
                 description: products.description,
                 imgUrl: products.imgUrl,
+                productCategory: products.productCategory,
                 isActive: products.isActive,
                 createdAt: products.createdAt,
             })
@@ -126,11 +157,24 @@ export async function updateProduct(req, res, next) {
         const name = toStringOrUndefined(req.body?.name);
         const description = toStringOrUndefined(req.body?.description);
         const isActive = toBooleanOrUndefined(req.body?.isActive);
+        const productCategory = normalizeProductCategory(
+            req.body?.productCategory ?? req.body?.product_category ?? req.body?.category
+        );
 
         const imgUrl = await maybeUploadProductImage(req, productId);
 
-        if (!name && description === undefined && isActive === undefined && imgUrl === undefined) {
+        if (
+            !name &&
+            description === undefined &&
+            isActive === undefined &&
+            imgUrl === undefined &&
+            productCategory === undefined
+        ) {
             return res.status(400).json({ error: "NOTHING_TO_UPDATE" });
+        }
+
+        if (productCategory !== undefined && !PRODUCT_CATEGORIES.includes(productCategory)) {
+            return res.status(400).json({ error: "INVALID_PRODUCT_CATEGORY" });
         }
 
         const updateValues = {};
@@ -138,6 +182,7 @@ export async function updateProduct(req, res, next) {
         if (description !== undefined) updateValues.description = description;
         if (isActive !== undefined) updateValues.isActive = isActive;
         if (imgUrl !== undefined) updateValues.imgUrl = imgUrl;
+        if (productCategory !== undefined) updateValues.productCategory = productCategory;
 
         const updated = await db
             .update(products)
@@ -148,6 +193,7 @@ export async function updateProduct(req, res, next) {
                 name: products.name,
                 description: products.description,
                 imgUrl: products.imgUrl,
+                productCategory: products.productCategory,
                 isActive: products.isActive,
                 createdAt: products.createdAt,
             });

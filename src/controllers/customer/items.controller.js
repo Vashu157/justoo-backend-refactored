@@ -5,6 +5,7 @@ import {
     eq,
     gt,
     gte,
+    inArray,
     ilike,
     lte,
     or,
@@ -17,6 +18,7 @@ import {
     toNumericStringOrUndefined,
     toStringOrUndefined,
 } from "../../utils/common.js";
+import { normalizeProductCategories } from "../../utils/productCategories.js";
 
 function getSortFromQuery(query) {
     const sort = toStringOrUndefined(query?.sort)?.toLowerCase();
@@ -57,6 +59,13 @@ function buildItemFilters({ query, includeSearch }) {
     if (maxDiscount !== undefined)
         filters.push(lte(inventory.discountPercent, maxDiscount));
 
+    const categories = normalizeProductCategories(
+        query?.category ?? query?.productCategory ?? query?.product_category
+    );
+    if (categories?.length) {
+        filters.push(inArray(products.productCategory, categories));
+    }
+
     if (includeSearch) {
         const q = toStringOrUndefined(query?.q);
         if (q) {
@@ -74,6 +83,7 @@ function selectItemShape() {
         name: products.name,
         description: products.description,
         imgUrl: products.imgUrl,
+        productCategory: products.productCategory,
         sellingPrice: inventory.sellingPrice,
         discountPercent: inventory.discountPercent,
         quantity: inventory.quantity,
